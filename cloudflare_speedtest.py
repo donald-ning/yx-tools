@@ -19,6 +19,19 @@ from datetime import datetime
 
 
 # 使用curl的备用HTTP请求函数（解决SSL模块不可用的问题）
+class CurlResponse:
+    """模拟 requests.Response，用于 curl_request 的返回值"""
+    def __init__(self, status_code, text):
+        self.status_code = status_code
+        self.text = text
+        self._json = None
+
+    def json(self):
+        if self._json is None:
+            self._json = json.loads(self.text) if self.text else {}
+        return self._json
+
+
 def curl_request(url, method="GET", data=None, headers=None, timeout=30):
     """
     使用curl命令进行HTTP请求（当requests的SSL模块不可用时使用）
@@ -248,7 +261,6 @@ DEFAULT_SPEEDTEST_URL = "https://speed.cloudflare.com/__down?bytes=99999999"
 # Cloudflare IPv6 地址段（内置）
 # 数据来源：https://www.cloudflare.com/ips-v6/
 CLOUDFLARE_IPV6_RANGES = [
-    # 主要地址段
     "2400:cb00::/32",
     "2606:4700::/32",
     "2803:f800::/32",
@@ -256,103 +268,6 @@ CLOUDFLARE_IPV6_RANGES = [
     "2405:8100::/32",
     "2a06:98c0::/29",
     "2c0f:f248::/32",
-    # 详细子网段
-    "2400:cb00:2049::/48",
-    "2400:cb00:f00e::/48",
-    "2606:4700:10::/48",
-    "2606:4700:130::/48",
-    "2606:4700:3000::/48",
-    "2606:4700:3001::/48",
-    "2606:4700:3002::/48",
-    "2606:4700:3003::/48",
-    "2606:4700:3004::/48",
-    "2606:4700:3005::/48",
-    "2606:4700:3006::/48",
-    "2606:4700:3007::/48",
-    "2606:4700:3008::/48",
-    "2606:4700:3009::/48",
-    "2606:4700:3010::/48",
-    "2606:4700:3011::/48",
-    "2606:4700:3012::/48",
-    "2606:4700:3013::/48",
-    "2606:4700:3014::/48",
-    "2606:4700:3015::/48",
-    "2606:4700:3016::/48",
-    "2606:4700:3017::/48",
-    "2606:4700:3018::/48",
-    "2606:4700:3019::/48",
-    "2606:4700:3020::/48",
-    "2606:4700:3021::/48",
-    "2606:4700:3022::/48",
-    "2606:4700:3023::/48",
-    "2606:4700:3024::/48",
-    "2606:4700:3025::/48",
-    "2606:4700:3026::/48",
-    "2606:4700:3027::/48",
-    "2606:4700:3028::/48",
-    "2606:4700:3029::/48",
-    "2606:4700:3030::/48",
-    "2606:4700:3031::/48",
-    "2606:4700:3032::/48",
-    "2606:4700:3033::/48",
-    "2606:4700:3034::/48",
-    "2606:4700:3035::/48",
-    "2606:4700:3036::/48",
-    "2606:4700:3037::/48",
-    "2606:4700:3038::/48",
-    "2606:4700:3039::/48",
-    "2606:4700:a0::/48",
-    "2606:4700:a1::/48",
-    "2606:4700:a8::/48",
-    "2606:4700:a9::/48",
-    "2606:4700:a::/48",
-    "2606:4700:b::/48",
-    "2606:4700:c::/48",
-    "2606:4700:d0::/48",
-    "2606:4700:d1::/48",
-    "2606:4700:d::/48",
-    "2606:4700:e0::/48",
-    "2606:4700:e1::/48",
-    "2606:4700:e2::/48",
-    "2606:4700:e3::/48",
-    "2606:4700:e4::/48",
-    "2606:4700:e5::/48",
-    "2606:4700:e6::/48",
-    "2606:4700:e7::/48",
-    "2606:4700:e::/48",
-    "2606:4700:f1::/48",
-    "2606:4700:f2::/48",
-    "2606:4700:f3::/48",
-    "2606:4700:f4::/48",
-    "2606:4700:f5::/48",
-    "2606:4700:f::/48",
-    "2803:f800:50::/48",
-    "2803:f800:51::/48",
-    "2a06:98c1:3100::/48",
-    "2a06:98c1:3101::/48",
-    "2a06:98c1:3102::/48",
-    "2a06:98c1:3103::/48",
-    "2a06:98c1:3104::/48",
-    "2a06:98c1:3105::/48",
-    "2a06:98c1:3106::/48",
-    "2a06:98c1:3107::/48",
-    "2a06:98c1:3108::/48",
-    "2a06:98c1:3109::/48",
-    "2a06:98c1:310a::/48",
-    "2a06:98c1:310b::/48",
-    "2a06:98c1:310c::/48",
-    "2a06:98c1:310d::/48",
-    "2a06:98c1:310e::/48",
-    "2a06:98c1:310f::/48",
-    "2a06:98c1:3120::/48",
-    "2a06:98c1:3121::/48",
-    "2a06:98c1:3122::/48",
-    "2a06:98c1:3123::/48",
-    "2a06:98c1:3200::/48",
-    "2a06:98c1:50::/48",
-    "2a06:98c1:51::/48",
-    "2a06:98c1:54::/48",
-    "2a06:98c1:58::/48",
 ]
 
 # GitHub Release版本 - 使用官方CloudflareSpeedTest
@@ -424,157 +339,91 @@ def get_executable_name(os_type, arch_type):
         return f"CloudflareST_linux_{arch_type}"
 
 
+def _download_requests(url, filename):
+    """使用 requests 下载，SSL 失败返回 None，其他失败返回 False"""
+    try:
+        response = requests.get(url, stream=True, timeout=60)
+        response.raise_for_status()
+        with open(filename, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        return True
+    except (requests.exceptions.SSLError, ImportError):
+        return None
+    except Exception:
+        return False
+
+
+def _download_subprocess(cmd, filename):
+    """运行子进程下载命令，成功返回 True，失败返回 False"""
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        return result.returncode == 0 and os.path.exists(filename)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+    except Exception:
+        return False
+
+
 def download_file(url, filename):
-    """下载文件 - 支持多种下载方法"""
+    """下载文件 - 依次尝试 requests、curl、wget、urllib，提高跨平台兼容性"""
     print(f"正在下载: {url}")
 
-    # 方法1: 尝试使用 requests（SSL不可用时静默切换到curl）
-    try:
-        try:
-            response = requests.get(url, stream=True, timeout=60)
-            response.raise_for_status()
-
-            with open(filename, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
+    # 方法1: requests（含 SSL fallback → curl）
+    if url.startswith("https://"):
+        result = _download_requests(url, filename)
+        if result is True:
             print(f"✅ 下载完成: {filename}")
             return True
-        except ImportError as e:
-            # SSL模块不可用，静默切换到curl下载
-            if "SSL module is not available" in str(e):
-                result = subprocess.run(
-                    ["curl", "-L", "-o", filename, url],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    timeout=60,
-                )
-
-                if result.returncode == 0 and os.path.exists(filename):
-                    print(f"✅ 下载完成: {filename}")
-                    return True
-            else:
-                raise
-    except Exception:
-        # 静默失败，继续尝试其他方法
-        pass
-
-    # 方法2: 尝试使用 wget
-    try:
-        result = subprocess.run(
-            ["wget", "-O", filename, url],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=60,
-        )
-
-        if result.returncode == 0 and os.path.exists(filename):
-            print(f"✅ 下载完成: {filename}")
-            return True
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        # wget 不可用，静默继续
-        pass
-    except Exception:
-        # wget 执行失败，静默继续
-        pass
-
-    # 方法3: 尝试使用 curl
-    try:
-        result = subprocess.run(
-            ["curl", "-L", "-o", filename, url],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=60,
-        )
-
-        if result.returncode == 0 and os.path.exists(filename):
-            print(f"✅ 下载完成: {filename}")
-            return True
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        # curl 不可用，静默继续
-        pass
-    except Exception:
-        # curl 执行失败，静默继续
-        pass
-
-    # 方法3.5: Windows PowerShell 下载
-    if sys.platform == "win32":
-        try:
-            ps_cmd = f'Invoke-WebRequest -Uri "{url}" -OutFile "{filename}"'
-            result = subprocess.run(
-                ["powershell", "-Command", ps_cmd],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=60,
-            )
-
-            if result.returncode == 0 and os.path.exists(filename):
+        if result is None:
+            if _download_subprocess(["curl", "-L", "-o", filename, url], filename):
                 print(f"✅ 下载完成: {filename}")
                 return True
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            # PowerShell 不可用，静默继续
-            pass
-        except Exception:
-            # PowerShell 执行失败，静默继续
-            pass
+    else:
+        if _download_requests(url, filename):
+            print(f"✅ 下载完成: {filename}")
+            return True
 
-    # 方法4: 尝试使用 urllib
+    # 方法2: wget
+    if _download_subprocess(["wget", "-O", filename, url], filename):
+        print(f"✅ 下载完成: {filename}")
+        return True
+
+    # 方法3: curl
+    if _download_subprocess(["curl", "-L", "-o", filename, url], filename):
+        print(f"✅ 下载完成: {filename}")
+        return True
+
+    # 方法4: Windows PowerShell
+    if sys.platform == "win32":
+        ps_cmd = f'Invoke-WebRequest -Uri "{url}" -OutFile "{filename}"'
+        if _download_subprocess(["powershell", "-Command", ps_cmd], filename):
+            print(f"✅ 下载完成: {filename}")
+            return True
+
+    # 方法5: urllib
     try:
         import urllib.request
-
         urllib.request.urlretrieve(url, filename)
         print(f"✅ 下载完成: {filename}")
         return True
     except Exception:
-        # urllib 下载失败，静默继续
         pass
 
-    # 方法5: 尝试 HTTP 版本
+    # 方法6: HTTPS 失败后尝试 HTTP 版本
     if url.startswith("https://"):
         http_url = url.replace("https://", "http://")
-        try:
-            try:
-                response = requests.get(http_url, stream=True, timeout=60)
-                response.raise_for_status()
-
-                with open(filename, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-
+        result = _download_requests(http_url, filename)
+        if result is True:
+            print(f"✅ 下载完成: {filename}")
+            return True
+        if result is None:
+            if _download_subprocess(["curl", "-L", "-o", filename, http_url], filename):
                 print(f"✅ 下载完成: {filename}")
                 return True
-            except ImportError as e:
-                # SSL模块不可用，静默切换到curl下载
-                if "SSL module is not available" in str(e):
-                    result = subprocess.run(
-                        ["curl", "-L", "-o", filename, http_url],
-                        capture_output=True,
-                        text=True,
-                        timeout=60,
-                    )
 
-                    if result.returncode == 0 and os.path.exists(filename):
-                        print(f"✅ 下载完成: {filename}")
-                        return True
-                else:
-                    raise
-        except Exception:
-            # HTTP 下载失败，静默继续
-            pass
-
-    # 所有方法都失败
     print("❌ 下载失败")
     return False
-
-
 def download_cloudflare_speedtest(os_type, arch_type):
     """下载 CloudflareSpeedTest 可执行文件（优先使用反代版本）"""
     # 优先检查反代版本
@@ -1709,90 +1558,111 @@ def handle_normal_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
     return cfcolo, dn_count, speed_limit, time_limit
 
 
-def generate_proxy_list(result_file="result.csv", output_file="ips_ports.txt"):
-    """从测速结果生成反代IP列表"""
+
+def _parse_speedtest_csv(result_file="result.csv"):
+    """解析测速结果 CSV，返回 IP 信息列表（公共函数，消除重复代码）
+
+    返回格式: [{"ip": str, "port": int, "speed": float,
+                 "latency": str, "region_code": str, "region_name": str, "ip_port": str}, ...]
+    自动处理 IPv4:端口 拆分（仅当恰好一个冒号时拆分，IPv6 不受影响）
+    """
     if not os.path.exists(result_file):
-        print(f"未找到测速结果文件: {result_file}")
-        return False
+        return []
 
-    try:
-        import csv
-
-        print(f"\n正在生成反代IP列表...")
-
-        # 读取CSV文件
-        with open(result_file, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-
-        if not rows:
-            print("测速结果文件为空")
-            return False
-
-        # 生成反代IP列表
-        proxy_ips = []
-        for row in rows:
-            # 查找IP和端口列
+    rows = []
+    with open(result_file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
             ip = None
             port = None
-
-            # 查找IP列
             for key in row.keys():
-                if "ip" in key.lower() and "地址" in key and row[key] is not None:
-                    ip = str(row[key]).strip()
+                k = key.strip()
+                if row[k] is None:
+                    continue
+                if "ip" in k.lower() and "地址" in k:
+                    ip = str(row[k]).strip()
                     break
-                elif key.lower() == "ip" and row[key] is not None:
-                    ip = str(row[key]).strip()
+                elif k.lower() == "ip":
+                    ip = str(row[k]).strip()
                     break
-
-            # 查找端口列
             for key in row.keys():
-                if "端口" in key and row[key] is not None:
-                    port = str(row[key]).strip()
+                k = key.strip()
+                if row[k] is None:
+                    continue
+                if "端口" in k:
+                    port = str(row[k]).strip()
                     break
-                elif key.lower() == "port" and row[key] is not None:
-                    port = str(row[key]).strip()
+                elif k.lower() == "port":
+                    port = str(row[k]).strip()
                     break
-
-            # 如果IP地址中包含端口信息（如 1.2.3.4:443），提取端口
-            if ip and ":" in ip:
+            if ip and ":" in ip and ip.count(":") == 1:
                 ip_parts = ip.split(":")
-                if len(ip_parts) == 2:
-                    ip = ip_parts[0]  # 提取纯IP地址
-                    if not port:  # 如果还没有找到端口，使用IP中的端口
-                        port = ip_parts[1]
-
-            # 如果没有找到端口，使用默认值
+                ip = ip_parts[0]
+                if not port:
+                    port = ip_parts[1]
             if not port:
                 port = "443"
+            if not ip:
+                continue
+            speed = 0
+            for sk in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度", "speed"]:
+                if sk in row and row[sk] is not None:
+                    try:
+                        speed = float(str(row[sk]).strip())
+                    except ValueError:
+                        speed = 0
+                    break
+            latency = ""
+            for lk in ["平均延迟", "延迟", "latency"]:
+                if lk in row and row[lk] is not None:
+                    latency = str(row[lk]).strip()
+                    break
+            region_code = (row.get("地区码") or "").strip()
+            region_name = "未知地区"
+            if region_code and region_code in AIRPORT_CODES:
+                region_name = AIRPORT_CODES[region_code].get("name", region_code)
+            elif region_code:
+                region_name = region_code
+            rows.append({
+                "ip": ip,
+                "port": int(port),
+                "speed": speed,
+                "latency": latency,
+                "region_code": region_code,
+                "region_name": region_name,
+                "ip_port": f"{ip}:{port}",
+            })
+    return rows
 
-            if ip and port:
-                proxy_ips.append(f"{ip}:{port}")
 
-        # 保存到文件
-        with open(output_file, "w", encoding="utf-8") as f:
-            for proxy in proxy_ips:
-                f.write(proxy + "\n")
-
-        print(f"反代IP列表已生成: {output_file}")
-        print(f"共生成 {len(proxy_ips)} 个反代IP")
-        print(f"📝 格式: IP:端口 (如: 1.2.3.4:443)")
-
-        # 显示前10个IP作为示例
-        if proxy_ips:
-            print(f"\n前10个反代IP示例:")
-            for i, proxy in enumerate(proxy_ips[:10], 1):
-                print(f"  {i:2d}. {proxy}")
-            if len(proxy_ips) > 10:
-                print(f"  ... 还有 {len(proxy_ips) - 10} 个IP")
-
-        return True
-
-    except Exception as e:
-        print(f"生成反代IP列表失败: {e}")
+def generate_proxy_list(result_file="result.csv", output_file="ips_ports.txt"):
+    """从测速结果生成反代IP列表"""
+    rows = _parse_speedtest_csv(result_file)
+    if not rows:
+        print("测速结果文件为空" if not os.path.exists(result_file) else "")
         return False
 
+    print(f"\n正在生成反代IP列表...")
+    proxy_ips = [r["ip_port"] for r in rows]
 
+    # 保存到文件
+    with open(output_file, "w", encoding="utf-8") as f:
+        for proxy in proxy_ips:
+            f.write(proxy + "\n")
+
+    print(f"反代IP列表已生成: {output_file}")
+    print(f"共生成 {len(proxy_ips)} 个反代IP")
+    print(f"\U0001f4dd 格式: IP:端口 (如: 1.2.3.4:443)")
+
+    # 显示前10个IP作为示例
+    if proxy_ips:
+        print(f"\n前10个反代IP示例:")
+        for i, proxy in enumerate(proxy_ips[:10], 1):
+            print(f"  {i:2d}. {proxy}")
+        if len(proxy_ips) > 10:
+            print(f"  ... 还有 {len(proxy_ips) - 10} 个IP")
+
+    return True
 def run_speedtest_with_file(
     ip_file, dn_count, speed_limit, time_limit, thread_count="200"
 ):
@@ -3295,270 +3165,265 @@ def upload_to_cloudflare_api(result_file="result.csv"):
 
     # 读取测速结果
     print("\n📊 正在读取测速结果...")
-    try:
-        best_ips = []
-        with open(result_file, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                # 安全获取数据，避免NoneType错误
-                ip = (row.get("IP 地址") or "").strip()
-                port = (row.get("端口") or "").strip()
+    best_ips = _parse_speedtest_csv(result_file)
+    if not best_ips:
+        print("❌ 未找到有效的测速结果")
+        return
+    best_ips = []
+    with open(result_file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # 安全获取数据，避免NoneType错误
+            ip = (row.get("IP 地址") or "").strip()
+            port = (row.get("端口") or "").strip()
 
-                # 尝试多种可能的列名来获取速度
-                speed = ""
-                for speed_key in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度"]:
-                    if speed_key in row and row[speed_key] is not None:
-                        speed = str(row[speed_key]).strip()
-                        break
+            # 尝试多种可能的列名来获取速度
+            speed = ""
+            for speed_key in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度"]:
+                if speed_key in row and row[speed_key] is not None:
+                    speed = str(row[speed_key]).strip()
+                    break
 
-                # 尝试多种可能的列名来获取延迟
-                latency = ""
-                for latency_key in ["平均延迟", "延迟", "latency"]:
-                    if latency_key in row and row[latency_key] is not None:
-                        latency = str(row[latency_key]).strip()
-                        break
+            # 尝试多种可能的列名来获取延迟
+            latency = ""
+            for latency_key in ["平均延迟", "延迟", "latency"]:
+                if latency_key in row and row[latency_key] is not None:
+                    latency = str(row[latency_key]).strip()
+                    break
 
-                # 获取地区码
-                region_code = (row.get("地区码") or "").strip()
+            # 获取地区码
+            region_code = (row.get("地区码") or "").strip()
 
-                # 如果IP地址中包含端口信息
-                if ip and ":" in ip:
-                    ip_parts = ip.split(":")
-                    if len(ip_parts) == 2:
-                        ip = ip_parts[0]
-                        if not port:
-                            port = ip_parts[1]
+            # 如果IP地址中包含端口信息
+            if ip and ":" in ip:
+                ip_parts = ip.split(":")
+                if len(ip_parts) == 2:
+                    ip = ip_parts[0]
+                    if not port:
+                        port = ip_parts[1]
 
-                # 设置默认端口
-                if not port:
-                    port = "443"
+            # 设置默认端口
+            if not port:
+                port = "443"
 
-                if ip:
-                    try:
-                        speed_val = float(speed) if speed else 0
-                        latency_val = latency if latency else "N/A"
-
-                        # 获取地区中文名称
-                        region_name = "未知地区"
-                        if region_code and region_code in AIRPORT_CODES:
-                            region_name = AIRPORT_CODES[region_code].get(
-                                "name", region_code
-                            )
-                        elif region_code:
-                            region_name = region_code
-
-                        best_ips.append(
-                            {
-                                "ip": ip,
-                                "port": int(port),
-                                "speed": speed_val,
-                                "latency": latency_val,
-                                "region_code": region_code,
-                                "region_name": region_name,
-                            }
-                        )
-                    except ValueError:
-                        continue
-
-        if not best_ips:
-            print("❌ 未找到有效的测速结果")
-            return
-
-        print(f"✅ 找到 {len(best_ips)} 个测速结果")
-
-        # 询问要上报多少个结果
-        while True:
-            count_input = input(
-                f"\n请输入要上报的IP数量 [默认: 10, 最多: {len(best_ips)}]: "
-            ).strip()
-            if not count_input:
-                upload_count = min(10, len(best_ips))
-                break
-            try:
-                upload_count = int(count_input)
-                if upload_count <= 0:
-                    print("✗ 请输入大于0的数字")
-                    continue
-                if upload_count > len(best_ips):
-                    print(f"⚠️  最多只能上报 {len(best_ips)} 个结果")
-                    upload_count = len(best_ips)
-                break
-            except ValueError:
-                print("✗ 请输入有效的数字")
-
-        # 显示将要上报的IP
-        print(f"\n将上报以下 {upload_count} 个优选IP:")
-        print("-" * 70)
-        for i, ip_info in enumerate(best_ips[:upload_count], 1):
-            region_display = (
-                f"{ip_info['region_name']}"
-                if ip_info.get("region_name")
-                else "未知地区"
-            )
-            print(
-                f"  {i:2d}. {ip_info['ip']:15s}:{ip_info['port']:<5d} - {ip_info['speed']:.2f} MB/s - {region_display} - 延迟: {ip_info['latency']}"
-            )
-        print("-" * 70)
-
-        # 确认上报
-        confirm = input("\n确认上报以上IP？[Y/n]: ").strip().lower()
-        if confirm in ["n", "no"]:
-            print("取消上报")
-            return None
-
-        # 如果需要清空，先执行清空操作
-        if should_clear:
-            print("\n🗑️  正在清空现有数据...")
-            try:
+            if ip:
                 try:
-                    delete_response = requests.delete(
-                        api_url,
-                        json={"all": True},
-                        headers={"Content-Type": "application/json"},
-                        timeout=10,
-                    )
-                except ImportError as e:
-                    # SSL模块不可用，静默切换到curl
-                    if "SSL module is not available" in str(e):
-                        delete_response = curl_request(
-                            api_url,
-                            method="DELETE",
-                            data={"all": True},
-                            headers={"Content-Type": "application/json"},
-                            timeout=10,
+                    speed_val = float(speed) if speed else 0
+                    latency_val = latency if latency else "N/A"
+
+                    # 获取地区中文名称
+                    region_name = "未知地区"
+                    if region_code and region_code in AIRPORT_CODES:
+                        region_name = AIRPORT_CODES[region_code].get(
+                            "name", region_code
                         )
-                    else:
-                        raise
+                    elif region_code:
+                        region_name = region_code
 
-                if delete_response.status_code == 200:
-                    print("✅ 现有数据已清空")
-                else:
-                    print(
-                        f"⚠️  清空失败 (HTTP {delete_response.status_code})，继续尝试添加..."
+                    best_ips.append(
+                        {
+                            "ip": ip,
+                            "port": int(port),
+                            "speed": speed_val,
+                            "latency": latency_val,
+                            "region_code": region_code,
+                            "region_name": region_name,
+                        }
                     )
-            except Exception as e:
-                print(f"⚠️  清空操作失败: {e}，继续尝试添加...")
+                except ValueError:
+                    continue
 
-        # 构建批量上报数据
-        print("\n🚀 开始批量上报优选IP...")
-        batch_data = []
-        for ip_info in best_ips[:upload_count]:
-            # 构建节点名称：地区名-速度MB/s
-            region_name = ip_info.get("region_name", "未知地区")
-            speed = ip_info["speed"]
-            name = f"{region_name}-{speed:.2f}MB/s"
+    if not best_ips:
+        print("❌ 未找到有效的测速结果")
+        return
 
-            batch_data.append(
-                {"ip": ip_info["ip"], "port": ip_info["port"], "name": name}
-            )
+    print(f"✅ 找到 {len(best_ips)} 个测速结果")
 
-        # 发送批量POST请求
-        use_curl_fallback = False
-        response = None
-        success_count = 0
-        fail_count = 0
-        skipped_count = 0
+    # 询问要上报多少个结果
+    while True:
+        count_input = input(
+            f"\n请输入要上报的IP数量 [默认: 10, 最多: {len(best_ips)}]: "
+        ).strip()
+        if not count_input:
+            upload_count = min(10, len(best_ips))
+            break
+        try:
+            upload_count = int(count_input)
+            if upload_count <= 0:
+                print("✗ 请输入大于0的数字")
+                continue
+            if upload_count > len(best_ips):
+                print(f"⚠️  最多只能上报 {len(best_ips)} 个结果")
+                upload_count = len(best_ips)
+            break
+        except ValueError:
+            print("✗ 请输入有效的数字")
 
+    # 显示将要上报的IP
+    print(f"\n将上报以下 {upload_count} 个优选IP:")
+    print("-" * 70)
+    for i, ip_info in enumerate(best_ips[:upload_count], 1):
+        region_display = (
+            f"{ip_info['region_name']}"
+            if ip_info.get("region_name")
+            else "未知地区"
+        )
+        print(
+            f"  {i:2d}. {ip_info['ip']:15s}:{ip_info['port']:<5d} - {ip_info['speed']:.2f} MB/s - {region_display} - 延迟: {ip_info['latency']}"
+        )
+    print("-" * 70)
+
+    # 确认上报
+    confirm = input("\n确认上报以上IP？[Y/n]: ").strip().lower()
+    if confirm in ["n", "no"]:
+        print("取消上报")
+        return None
+
+    # 如果需要清空，先执行清空操作
+    if should_clear:
+        print("\n🗑️  正在清空现有数据...")
         try:
             try:
-                response = requests.post(
+                delete_response = requests.delete(
                     api_url,
-                    json=batch_data,
+                    json={"all": True},
                     headers={"Content-Type": "application/json"},
-                    timeout=30,
+                    timeout=10,
                 )
             except ImportError as e:
-                # SSL模块不可用，静默切换到curl备用方案
+                # SSL模块不可用，静默切换到curl
                 if "SSL module is not available" in str(e):
-                    use_curl_fallback = True
-                    response = curl_request(
+                    delete_response = curl_request(
                         api_url,
-                        method="POST",
-                        data=batch_data,
+                        method="DELETE",
+                        data={"all": True},
                         headers={"Content-Type": "application/json"},
-                        timeout=30,
+                        timeout=10,
                     )
                 else:
                     raise
 
-            # 处理响应
-            if response and response.status_code == 200:
-                result = response.json()
-                if result.get("success"):
-                    success_count = result.get("added", 0)
-                    fail_count = result.get("failed", 0)
-                    skipped_count = result.get("skipped", 0)
-
-                    print("✅ 批量上报完成！")
-                    print(f"   成功添加: {success_count} 个")
-                    if skipped_count > 0:
-                        print(f"   跳过重复: {skipped_count} 个")
-                    if fail_count > 0:
-                        print(f"   失败: {fail_count} 个")
-                else:
-                    print(f"❌ 批量上报失败: {result.get('error', '未知错误')}")
-                    fail_count = upload_count
-            elif response and response.status_code == 403:
-                print(f"❌ 认证失败！请检查：")
-                print(f"   1. UUID或者路径是否正确")
-                print(f"   2. 是否在配置页面开启了 'API管理' 功能")
-                fail_count = upload_count
-            elif response:
-                print(f"❌ 批量上报失败 (HTTP {response.status_code})")
-                try:
-                    error_detail = response.json()
-                    print(f"   错误详情: {error_detail.get('error', '无详情')}")
-                except:
-                    pass
-                fail_count = upload_count
-
-        except requests.exceptions.Timeout:
-            print(f"❌ 请求超时，请检查网络连接")
-            print(f"   建议：检查网络连接或稍后重试")
-            fail_count = upload_count
-        except requests.exceptions.RequestException as e:
-            print(f"❌ 网络错误: {e}")
-            print(f"   建议：检查网络连接或API地址是否正确")
-            fail_count = upload_count
+            if delete_response.status_code == 200:
+                print("✅ 现有数据已清空")
+            else:
+                print(
+                    f"⚠️  清空失败 (HTTP {delete_response.status_code})，继续尝试添加..."
+                )
         except Exception as e:
-            print(f"❌ 请求失败: {e}")
-            print(f"   建议：检查配置是否正确，或联系技术支持")
+            print(f"⚠️  清空操作失败: {e}，继续尝试添加...")
+
+    # 构建批量上报数据
+    print("\n🚀 开始批量上报优选IP...")
+    batch_data = []
+    for ip_info in best_ips[:upload_count]:
+        # 构建节点名称：地区名-速度MB/s
+        region_name = ip_info.get("region_name", "未知地区")
+        speed = ip_info["speed"]
+        name = f"{region_name}-{speed:.2f}MB/s"
+
+        batch_data.append(
+            {"ip": ip_info["ip"], "port": ip_info["port"], "name": name}
+        )
+
+    # 发送批量POST请求
+    use_curl_fallback = False
+    response = None
+    success_count = 0
+    fail_count = 0
+    skipped_count = 0
+
+    try:
+        try:
+            response = requests.post(
+                api_url,
+                json=batch_data,
+                headers={"Content-Type": "application/json"},
+                timeout=30,
+            )
+        except ImportError as e:
+            # SSL模块不可用，静默切换到curl备用方案
+            if "SSL module is not available" in str(e):
+                use_curl_fallback = True
+                response = curl_request(
+                    api_url,
+                    method="POST",
+                    data=batch_data,
+                    headers={"Content-Type": "application/json"},
+                    timeout=30,
+                )
+            else:
+                raise
+
+        # 处理响应
+        if response and response.status_code == 200:
+            result = response.json()
+            if result.get("success"):
+                success_count = result.get("added", 0)
+                fail_count = result.get("failed", 0)
+                skipped_count = result.get("skipped", 0)
+
+                print("✅ 批量上报完成！")
+                print(f"   成功添加: {success_count} 个")
+                if skipped_count > 0:
+                    print(f"   跳过重复: {skipped_count} 个")
+                if fail_count > 0:
+                    print(f"   失败: {fail_count} 个")
+            else:
+                print(f"❌ 批量上报失败: {result.get('error', '未知错误')}")
+                fail_count = upload_count
+        elif response and response.status_code == 403:
+            print(f"❌ 认证失败！请检查：")
+            print(f"   1. UUID或者路径是否正确")
+            print(f"   2. 是否在配置页面开启了 'API管理' 功能")
+            fail_count = upload_count
+        elif response:
+            print(f"❌ 批量上报失败 (HTTP {response.status_code})")
+            try:
+                error_detail = response.json()
+                print(f"   错误详情: {error_detail.get('error', '无详情')}")
+            except:
+                pass
             fail_count = upload_count
 
-        # 显示统计信息
-        print("\n" + "=" * 70)
-        print(" 批量上报完成！")
-        print("=" * 70)
-        print(f"  ✅ 成功添加: {success_count} 个")
-        if "skipped_count" in locals() and skipped_count > 0:
-            print(f"  ⚠️  跳过重复: {skipped_count} 个")
-        if fail_count > 0:
-            print(f"  ❌ 失败: {fail_count} 个")
-        print(f"  📊 总计: {upload_count} 个")
-        print("=" * 70)
-
-        if success_count > 0:
-            print(f"\n💡 提示:")
-            print(f"   - 您可以访问 https://{worker_domain}/{uuid} 查看管理页面")
-            print(f"   - 优选IP已添加，订阅生成时会自动使用")
-            print(f"   - 批量上报速度更快，避免了逐个请求的超时问题")
-
-        # 返回上传配置信息
-        return {
-            "upload_method": "api",
-            "worker_domain": worker_domain,
-            "uuid": uuid,
-            "upload_count": upload_count,
-            "clear_existing": should_clear,  # 保存清空选项
-        }
-
+    except requests.exceptions.Timeout:
+        print(f"❌ 请求超时，请检查网络连接")
+        print(f"   建议：检查网络连接或稍后重试")
+        fail_count = upload_count
+    except requests.exceptions.RequestException as e:
+        print(f"❌ 网络错误: {e}")
+        print(f"   建议：检查网络连接或API地址是否正确")
+        fail_count = upload_count
     except Exception as e:
-        print(f"❌ 读取测速结果失败: {e}")
-        import traceback
+        print(f"❌ 请求失败: {e}")
+        print(f"   建议：检查配置是否正确，或联系技术支持")
+        fail_count = upload_count
 
-        traceback.print_exc()
-        return None
+    # 显示统计信息
+    print("\n" + "=" * 70)
+    print(" 批量上报完成！")
+    print("=" * 70)
+    print(f"  ✅ 成功添加: {success_count} 个")
+    if "skipped_count" in locals() and skipped_count > 0:
+        print(f"  ⚠️  跳过重复: {skipped_count} 个")
+    if fail_count > 0:
+        print(f"  ❌ 失败: {fail_count} 个")
+    print(f"  📊 总计: {upload_count} 个")
+    print("=" * 70)
 
+    if success_count > 0:
+        print(f"\n💡 提示:")
+        print(f"   - 您可以访问 https://{worker_domain}/{uuid} 查看管理页面")
+        print(f"   - 优选IP已添加，订阅生成时会自动使用")
+        print(f"   - 批量上报速度更快，避免了逐个请求的超时问题")
+
+    # 返回上传配置信息
+    return {
+        "upload_method": "api",
+        "worker_domain": worker_domain,
+        "uuid": uuid,
+        "upload_count": upload_count,
+        "clear_existing": should_clear,  # 保存清空选项
+    }
 
 def upload_to_github(result_file="result.csv"):
     """上传优选结果到 GitHub 公开仓库
@@ -3683,138 +3548,161 @@ def upload_to_github(result_file="result.csv"):
 
     # 读取测速结果
     print("\n📊 正在读取测速结果...")
-    try:
-        best_ips = []
-        with open(result_file, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                # 安全获取数据，避免NoneType错误
-                ip = (row.get("IP 地址") or "").strip()
-                port = (row.get("端口") or "").strip()
+    best_ips = _parse_speedtest_csv(result_file)
+    if not best_ips:
+        print("❌ 未找到有效的测速结果")
+        return
+    best_ips = []
+    with open(result_file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # 安全获取数据，避免NoneType错误
+            ip = (row.get("IP 地址") or "").strip()
+            port = (row.get("端口") or "").strip()
 
-                # 尝试多种可能的列名来获取速度
-                speed = ""
-                for speed_key in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度"]:
-                    if speed_key in row and row[speed_key] is not None:
-                        speed = str(row[speed_key]).strip()
-                        break
+            # 尝试多种可能的列名来获取速度
+            speed = ""
+            for speed_key in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度"]:
+                if speed_key in row and row[speed_key] is not None:
+                    speed = str(row[speed_key]).strip()
+                    break
 
-                # 尝试多种可能的列名来获取延迟
-                latency = ""
-                for latency_key in ["平均延迟", "延迟", "latency"]:
-                    if latency_key in row and row[latency_key] is not None:
-                        latency = str(row[latency_key]).strip()
-                        break
+            # 尝试多种可能的列名来获取延迟
+            latency = ""
+            for latency_key in ["平均延迟", "延迟", "latency"]:
+                if latency_key in row and row[latency_key] is not None:
+                    latency = str(row[latency_key]).strip()
+                    break
 
-                # 获取地区码
-                region_code = (row.get("地区码") or "").strip()
+            # 获取地区码
+            region_code = (row.get("地区码") or "").strip()
 
-                # 如果IP地址中包含端口信息
-                if ip and ":" in ip:
-                    ip_parts = ip.split(":")
-                    if len(ip_parts) == 2:
-                        ip = ip_parts[0]
-                        if not port:
-                            port = ip_parts[1]
+            # 如果IP地址中包含端口信息
+            if ip and ":" in ip:
+                ip_parts = ip.split(":")
+                if len(ip_parts) == 2:
+                    ip = ip_parts[0]
+                    if not port:
+                        port = ip_parts[1]
 
-                # 设置默认端口
-                if not port:
-                    port = "443"
+            # 设置默认端口
+            if not port:
+                port = "443"
 
-                if ip:
-                    try:
-                        speed_val = float(speed) if speed else 0
-                        latency_val = latency if latency else "N/A"
+            if ip:
+                try:
+                    speed_val = float(speed) if speed else 0
+                    latency_val = latency if latency else "N/A"
 
-                        # 获取地区中文名称
-                        region_name = "未知地区"
-                        if region_code and region_code in AIRPORT_CODES:
-                            region_name = AIRPORT_CODES[region_code].get(
-                                "name", region_code
-                            )
-                        elif region_code:
-                            region_name = region_code
-
-                        best_ips.append(
-                            {
-                                "ip": ip,
-                                "port": int(port),
-                                "speed": speed_val,
-                                "latency": latency_val,
-                                "region_code": region_code,
-                                "region_name": region_name,
-                            }
+                    # 获取地区中文名称
+                    region_name = "未知地区"
+                    if region_code and region_code in AIRPORT_CODES:
+                        region_name = AIRPORT_CODES[region_code].get(
+                            "name", region_code
                         )
-                    except ValueError:
-                        continue
+                    elif region_code:
+                        region_name = region_code
 
-        if not best_ips:
-            print("❌ 未找到有效的测速结果")
-            return
-
-        print(f"✅ 找到 {len(best_ips)} 个测速结果")
-
-        # 询问要上传多少个结果
-        while True:
-            count_input = input(
-                f"\n请输入要上传的IP数量 [默认: 10, 最多: {len(best_ips)}]: "
-            ).strip()
-            if not count_input:
-                upload_count = min(10, len(best_ips))
-                break
-            try:
-                upload_count = int(count_input)
-                if upload_count <= 0:
-                    print("✗ 请输入大于0的数字")
+                    best_ips.append(
+                        {
+                            "ip": ip,
+                            "port": int(port),
+                            "speed": speed_val,
+                            "latency": latency_val,
+                            "region_code": region_code,
+                            "region_name": region_name,
+                        }
+                    )
+                except ValueError:
                     continue
-                if upload_count > len(best_ips):
-                    print(f"⚠️  最多只能上传 {len(best_ips)} 个结果")
-                    upload_count = len(best_ips)
-                break
-            except ValueError:
-                print("✗ 请输入有效的数字")
 
-        # 显示将要上传的IP
-        print(f"\n将上传以下 {upload_count} 个优选IP:")
-        print("-" * 70)
-        for i, ip_info in enumerate(best_ips[:upload_count], 1):
-            region_display = (
-                f"{ip_info['region_name']}"
-                if ip_info.get("region_name")
-                else "未知地区"
-            )
-            print(
-                f"  {i:2d}. {ip_info['ip']:15s}:{ip_info['port']:<5d} - {ip_info['speed']:.2f} MB/s - {region_display} - 延迟: {ip_info['latency']}"
-            )
-        print("-" * 70)
+    if not best_ips:
+        print("❌ 未找到有效的测速结果")
+        return
 
-        # 确认上传
-        confirm = input("\n确认上传以上IP？[Y/n]: ").strip().lower()
-        if confirm in ["n", "no"]:
-            print("取消上传")
-            return
+    print(f"✅ 找到 {len(best_ips)} 个测速结果")
 
-        # 格式化数据为换行符分隔的格式（包含注释，和Cloudflare Workers API一样）
-        print("\n🚀 开始上传到 GitHub 仓库...")
-        content_lines = []
-        for ip_info in best_ips[:upload_count]:
-            # 构建节点名称：地区名-速度MB/s（和Cloudflare Workers API一样）
-            region_name = ip_info.get("region_name", "未知地区")
-            speed = ip_info["speed"]
-            name = f"{region_name}-{speed:.2f}MB/s"
-            # 格式：IP:端口#地区名-速度MB/s（井号前后无空格）
-            content_lines.append(f"{ip_info['ip']}:{ip_info['port']}#{name}")
-
-        # 使用换行符连接所有行
-        content = "\n".join(content_lines)
-
-        # 检查文件是否已存在
-        print(f"\n🔍 正在检查文件是否存在...")
-        file_sha = None
+    # 询问要上传多少个结果
+    while True:
+        count_input = input(
+            f"\n请输入要上传的IP数量 [默认: 10, 最多: {len(best_ips)}]: "
+        ).strip()
+        if not count_input:
+            upload_count = min(10, len(best_ips))
+            break
         try:
-            try:
-                check_response = requests.get(
+            upload_count = int(count_input)
+            if upload_count <= 0:
+                print("✗ 请输入大于0的数字")
+                continue
+            if upload_count > len(best_ips):
+                print(f"⚠️  最多只能上传 {len(best_ips)} 个结果")
+                upload_count = len(best_ips)
+            break
+        except ValueError:
+            print("✗ 请输入有效的数字")
+
+    # 显示将要上传的IP
+    print(f"\n将上传以下 {upload_count} 个优选IP:")
+    print("-" * 70)
+    for i, ip_info in enumerate(best_ips[:upload_count], 1):
+        region_display = (
+            f"{ip_info['region_name']}"
+            if ip_info.get("region_name")
+            else "未知地区"
+        )
+        print(
+            f"  {i:2d}. {ip_info['ip']:15s}:{ip_info['port']:<5d} - {ip_info['speed']:.2f} MB/s - {region_display} - 延迟: {ip_info['latency']}"
+        )
+    print("-" * 70)
+
+    # 确认上传
+    confirm = input("\n确认上传以上IP？[Y/n]: ").strip().lower()
+    if confirm in ["n", "no"]:
+        print("取消上传")
+        return
+
+    # 格式化数据为换行符分隔的格式（包含注释，和Cloudflare Workers API一样）
+    print("\n🚀 开始上传到 GitHub 仓库...")
+    content_lines = []
+    for ip_info in best_ips[:upload_count]:
+        # 构建节点名称：地区名-速度MB/s（和Cloudflare Workers API一样）
+        region_name = ip_info.get("region_name", "未知地区")
+        speed = ip_info["speed"]
+        name = f"{region_name}-{speed:.2f}MB/s"
+        # 格式：IP:端口#地区名-速度MB/s（井号前后无空格）
+        content_lines.append(f"{ip_info['ip']}:{ip_info['port']}#{name}")
+
+    # 使用换行符连接所有行
+    content = "\n".join(content_lines)
+
+    # 检查文件是否已存在
+    print(f"\n🔍 正在检查文件是否存在...")
+    file_sha = None
+    try:
+        try:
+            check_response = requests.get(
+                f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
+                headers={
+                    "Authorization": f"token {github_token}",
+                    "Accept": "application/vnd.github.v3+json",
+                },
+                timeout=10,
+            )
+            if check_response.status_code == 200:
+                file_data = check_response.json()
+                file_sha = file_data.get("sha", "")
+                print(f"⚠️  文件已存在，将更新文件")
+            elif check_response.status_code == 404:
+                print(f"✅ 文件不存在，将创建新文件")
+            else:
+                print(f"⚠️  无法检查文件状态，将尝试创建/更新")
+        except ImportError as e:
+            # SSL模块不可用，静默切换到curl
+            if "SSL module is not available" in str(e):
+                check_response = curl_request(
                     f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
+                    method="GET",
                     headers={
                         "Authorization": f"token {github_token}",
                         "Accept": "application/vnd.github.v3+json",
@@ -3829,168 +3717,140 @@ def upload_to_github(result_file="result.csv"):
                     print(f"✅ 文件不存在，将创建新文件")
                 else:
                     print(f"⚠️  无法检查文件状态，将尝试创建/更新")
-            except ImportError as e:
-                # SSL模块不可用，静默切换到curl
-                if "SSL module is not available" in str(e):
-                    check_response = curl_request(
-                        f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
-                        method="GET",
+            else:
+                raise
+    except Exception as e:
+        print(f"⚠️  检查文件状态失败: {e}，将尝试创建/更新")
+
+    # 准备上传数据
+    import base64
+
+    content_bytes = content.encode("utf-8")
+    content_base64 = base64.b64encode(content_bytes).decode("utf-8")
+
+    upload_data = {
+        "message": f"更新Cloudflare优选IP列表 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "content": content_base64,
+    }
+
+    # 如果文件已存在，需要提供sha
+    if file_sha:
+        upload_data["sha"] = file_sha
+
+    # 上传到 GitHub 仓库
+    try:
+        try:
+            if file_sha:
+                # 更新文件
+                response = requests.put(
+                    f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
+                    json=upload_data,
+                    headers={
+                        "Authorization": f"token {github_token}",
+                        "Accept": "application/vnd.github.v3+json",
+                    },
+                    timeout=30,
+                )
+            else:
+                # 创建文件
+                response = requests.put(
+                    f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
+                    json=upload_data,
+                    headers={
+                        "Authorization": f"token {github_token}",
+                        "Accept": "application/vnd.github.v3+json",
+                    },
+                    timeout=30,
+                )
+        except ImportError as e:
+            # SSL模块不可用，静默切换到curl
+            if "SSL module is not available" in str(e):
+                response = curl_request(
+                    f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
+                    method="PUT",
+                    data=upload_data,
+                    headers={
+                        "Authorization": f"token {github_token}",
+                        "Accept": "application/vnd.github.v3+json",
+                    },
+                    timeout=30,
+                )
+            else:
+                raise
+
+        if response and response.status_code in [200, 201]:
+            result = response.json()
+            file_url = result.get("content", {}).get("html_url", "")
+
+            # 尝试获取默认分支
+            default_branch = "main"  # 默认使用main分支
+            try:
+                try:
+                    repo_response = requests.get(
+                        f"https://api.github.com/repos/{owner}/{repo}",
                         headers={
                             "Authorization": f"token {github_token}",
                             "Accept": "application/vnd.github.v3+json",
                         },
                         timeout=10,
                     )
-                    if check_response.status_code == 200:
-                        file_data = check_response.json()
-                        file_sha = file_data.get("sha", "")
-                        print(f"⚠️  文件已存在，将更新文件")
-                    elif check_response.status_code == 404:
-                        print(f"✅ 文件不存在，将创建新文件")
-                    else:
-                        print(f"⚠️  无法检查文件状态，将尝试创建/更新")
-                else:
-                    raise
-        except Exception as e:
-            print(f"⚠️  检查文件状态失败: {e}，将尝试创建/更新")
+                    if repo_response.status_code == 200:
+                        repo_data = repo_response.json()
+                        default_branch = repo_data.get("default_branch", "main")
+                except:
+                    pass
+            except:
+                pass
 
-        # 准备上传数据
-        import base64
+            raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{file_path}"
 
-        content_bytes = content.encode("utf-8")
-        content_base64 = base64.b64encode(content_bytes).decode("utf-8")
+            print("\n" + "=" * 70)
+            print(" ✅ 上传成功！")
+            print("=" * 70)
+            print(f"  仓库地址: https://github.com/{owner}/{repo}")
+            if file_url:
+                print(f"  文件地址: {file_url}")
+            print(f"  原始文件地址: {raw_url}")
+            print(f"  上传数量: {upload_count} 个IP")
+            print("=" * 70)
 
-        upload_data = {
-            "message": f"更新Cloudflare优选IP列表 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "content": content_base64,
-        }
+            print(f"\n💡 提示:")
+            print(f"   - 您可以使用原始文件地址直接访问IP列表")
+            print(f"   - 文件格式为换行符分隔，每行一个 IP:端口#地区名-速度MB/s")
+            print(f"   - 您可以在GitHub上管理这个仓库")
 
-        # 如果文件已存在，需要提供sha
-        if file_sha:
-            upload_data["sha"] = file_sha
-
-        # 上传到 GitHub 仓库
-        try:
+            # 返回上传配置信息
+            return {
+                "upload_method": "github",
+                "repo_info": f"{owner}/{repo}",
+                "github_token": github_token,
+                "file_path": file_path,
+                "upload_count": upload_count,
+            }
+        elif response and response.status_code == 401:
+            print(f"❌ 认证失败！请检查：")
+            print(f"   1. GitHub Token 是否正确")
+            print(f"   2. Token 是否具有 repo 权限")
+        elif response and response.status_code == 404:
+            print(f"❌ 仓库不存在或无权限！请检查：")
+            print(f"   1. 仓库路径是否正确: {owner}/{repo}")
+            print(f"   2. Token 是否有该仓库的写入权限")
+        elif response:
+            print(f"❌ 上传失败 (HTTP {response.status_code})")
             try:
-                if file_sha:
-                    # 更新文件
-                    response = requests.put(
-                        f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
-                        json=upload_data,
-                        headers={
-                            "Authorization": f"token {github_token}",
-                            "Accept": "application/vnd.github.v3+json",
-                        },
-                        timeout=30,
-                    )
-                else:
-                    # 创建文件
-                    response = requests.put(
-                        f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
-                        json=upload_data,
-                        headers={
-                            "Authorization": f"token {github_token}",
-                            "Accept": "application/vnd.github.v3+json",
-                        },
-                        timeout=30,
-                    )
-            except ImportError as e:
-                # SSL模块不可用，静默切换到curl
-                if "SSL module is not available" in str(e):
-                    response = curl_request(
-                        f"https://api.github.com/repos/{owner}/{repo}/contents/{file_path}",
-                        method="PUT",
-                        data=upload_data,
-                        headers={
-                            "Authorization": f"token {github_token}",
-                            "Accept": "application/vnd.github.v3+json",
-                        },
-                        timeout=30,
-                    )
-                else:
-                    raise
-
-            if response and response.status_code in [200, 201]:
-                result = response.json()
-                file_url = result.get("content", {}).get("html_url", "")
-
-                # 尝试获取默认分支
-                default_branch = "main"  # 默认使用main分支
-                try:
-                    try:
-                        repo_response = requests.get(
-                            f"https://api.github.com/repos/{owner}/{repo}",
-                            headers={
-                                "Authorization": f"token {github_token}",
-                                "Accept": "application/vnd.github.v3+json",
-                            },
-                            timeout=10,
-                        )
-                        if repo_response.status_code == 200:
-                            repo_data = repo_response.json()
-                            default_branch = repo_data.get("default_branch", "main")
-                    except:
-                        pass
-                except:
-                    pass
-
-                raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{file_path}"
-
-                print("\n" + "=" * 70)
-                print(" ✅ 上传成功！")
-                print("=" * 70)
-                print(f"  仓库地址: https://github.com/{owner}/{repo}")
-                if file_url:
-                    print(f"  文件地址: {file_url}")
-                print(f"  原始文件地址: {raw_url}")
-                print(f"  上传数量: {upload_count} 个IP")
-                print("=" * 70)
-
-                print(f"\n💡 提示:")
-                print(f"   - 您可以使用原始文件地址直接访问IP列表")
-                print(f"   - 文件格式为换行符分隔，每行一个 IP:端口#地区名-速度MB/s")
-                print(f"   - 您可以在GitHub上管理这个仓库")
-
-                # 返回上传配置信息
-                return {
-                    "upload_method": "github",
-                    "repo_info": f"{owner}/{repo}",
-                    "github_token": github_token,
-                    "file_path": file_path,
-                    "upload_count": upload_count,
-                }
-            elif response and response.status_code == 401:
-                print(f"❌ 认证失败！请检查：")
-                print(f"   1. GitHub Token 是否正确")
-                print(f"   2. Token 是否具有 repo 权限")
-            elif response and response.status_code == 404:
-                print(f"❌ 仓库不存在或无权限！请检查：")
-                print(f"   1. 仓库路径是否正确: {owner}/{repo}")
-                print(f"   2. Token 是否有该仓库的写入权限")
-            elif response:
-                print(f"❌ 上传失败 (HTTP {response.status_code})")
-                try:
-                    error_detail = response.json()
-                    print(f"   错误详情: {error_detail.get('message', '无详情')}")
-                except:
-                    pass
-        except requests.exceptions.Timeout:
-            print(f"❌ 请求超时，请检查网络连接")
-            print(f"   建议：检查网络连接或稍后重试")
-        except requests.exceptions.RequestException as e:
-            print(f"❌ 网络错误: {e}")
-            print(f"   建议：检查网络连接或GitHub API地址是否正确")
-        except Exception as e:
-            print(f"❌ 上传失败: {e}")
-            print(f"   建议：检查配置是否正确，或联系技术支持")
-
+                error_detail = response.json()
+                print(f"   错误详情: {error_detail.get('message', '无详情')}")
+            except:
+                pass
+    except requests.exceptions.Timeout:
+        print(f"❌ 请求超时，请检查网络连接")
+        print(f"   建议：检查网络连接或稍后重试")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ 网络错误: {e}")
+        print(f"   建议：检查网络连接或GitHub API地址是否正确")
     except Exception as e:
-        print(f"❌ 读取测速结果失败: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return None
-
+        print(f"❌ 上传失败: {e}")
+        print(f"   建议：检查配置是否正确，或联系技术支持")
 
 def upload_to_cloudflare_api_cli(
     result_file="result.csv",

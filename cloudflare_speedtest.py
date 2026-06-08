@@ -556,8 +556,6 @@ def download_cloudflare_speedtest(os_type, arch_type):
                     input("按 Enter 键退出...")
                 sys.exit(1)
 
-            # 清理压缩包
-            os.remove(archive_name)
 
         except Exception as e:
             print(f"解压失败: {e}")
@@ -1612,7 +1610,7 @@ def _parse_speedtest_csv(result_file="result.csv"):
                     except ValueError:
                         speed = 0
                     break
-            latency = ""
+            latency = "N/A"
             for lk in ["平均延迟", "延迟", "latency"]:
                 if lk in row and row[lk] is not None:
                     latency = str(row[lk]).strip()
@@ -1706,58 +1704,10 @@ def run_speedtest_with_file(
 
         # 等待用户按键，不自动关闭窗口
         input("\n按回车键退出...")
-        return 0
+        return result.returncode
 
     except Exception as e:
         print(f"运行测速失败: {e}")
-        return 1
-
-
-def run_speedtest(
-    exec_name, cfcolo, dn_count, speed_limit, time_limit, thread_count="200"
-):
-    """运行 CloudflareSpeedTest"""
-    print(f"\n开始运行 CloudflareSpeedTest...")
-    print(f"测试参数:")
-    print(f"  - 机场码: {cfcolo} ({AIRPORT_CODES.get(cfcolo, {}).get('name', '未知')})")
-    print(f"  - 测试 IP 数量: {dn_count}")
-    print(f"  - 下载速度阈值: {speed_limit} MB/s")
-    print(f"  - 延迟阈值: {time_limit} ms")
-    print(f"  - 延迟测速线程数: {thread_count}")
-    print("-" * 50)
-
-    # 构建命令
-    if sys.platform == "win32":
-        cmd = [exec_name]
-    else:
-        cmd = [f"./{exec_name}"]
-
-    cmd.extend(
-        [
-            "-n",
-            thread_count,
-            "-dn",
-            dn_count,
-            "-sl",
-            speed_limit,
-            "-tl",
-            time_limit,
-            "-f",
-            CLOUDFLARE_IP_FILE,
-            "-url",
-            DEFAULT_SPEEDTEST_URL,
-        ]
-    )
-
-    try:
-        result = subprocess.run(cmd, check=True)
-        print("\nCloudflareSpeedTest 任务完成！")
-        return result.returncode
-    except subprocess.CalledProcessError as e:
-        print(f"\n运行失败: {e}")
-        return e.returncode
-    except FileNotFoundError:
-        print(f"\n找不到可执行文件: {exec_name}")
         return 1
 
 
@@ -3169,73 +3119,6 @@ def upload_to_cloudflare_api(result_file="result.csv"):
     if not best_ips:
         print("❌ 未找到有效的测速结果")
         return
-    best_ips = []
-    with open(result_file, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            # 安全获取数据，避免NoneType错误
-            ip = (row.get("IP 地址") or "").strip()
-            port = (row.get("端口") or "").strip()
-
-            # 尝试多种可能的列名来获取速度
-            speed = ""
-            for speed_key in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度"]:
-                if speed_key in row and row[speed_key] is not None:
-                    speed = str(row[speed_key]).strip()
-                    break
-
-            # 尝试多种可能的列名来获取延迟
-            latency = ""
-            for latency_key in ["平均延迟", "延迟", "latency"]:
-                if latency_key in row and row[latency_key] is not None:
-                    latency = str(row[latency_key]).strip()
-                    break
-
-            # 获取地区码
-            region_code = (row.get("地区码") or "").strip()
-
-            # 如果IP地址中包含端口信息
-            if ip and ":" in ip:
-                ip_parts = ip.split(":")
-                if len(ip_parts) == 2:
-                    ip = ip_parts[0]
-                    if not port:
-                        port = ip_parts[1]
-
-            # 设置默认端口
-            if not port:
-                port = "443"
-
-            if ip:
-                try:
-                    speed_val = float(speed) if speed else 0
-                    latency_val = latency if latency else "N/A"
-
-                    # 获取地区中文名称
-                    region_name = "未知地区"
-                    if region_code and region_code in AIRPORT_CODES:
-                        region_name = AIRPORT_CODES[region_code].get(
-                            "name", region_code
-                        )
-                    elif region_code:
-                        region_name = region_code
-
-                    best_ips.append(
-                        {
-                            "ip": ip,
-                            "port": int(port),
-                            "speed": speed_val,
-                            "latency": latency_val,
-                            "region_code": region_code,
-                            "region_name": region_name,
-                        }
-                    )
-                except ValueError:
-                    continue
-
-    if not best_ips:
-        print("❌ 未找到有效的测速结果")
-        return
 
     print(f"✅ 找到 {len(best_ips)} 个测速结果")
 
@@ -3549,73 +3432,6 @@ def upload_to_github(result_file="result.csv"):
     # 读取测速结果
     print("\n📊 正在读取测速结果...")
     best_ips = _parse_speedtest_csv(result_file)
-    if not best_ips:
-        print("❌ 未找到有效的测速结果")
-        return
-    best_ips = []
-    with open(result_file, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            # 安全获取数据，避免NoneType错误
-            ip = (row.get("IP 地址") or "").strip()
-            port = (row.get("端口") or "").strip()
-
-            # 尝试多种可能的列名来获取速度
-            speed = ""
-            for speed_key in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度"]:
-                if speed_key in row and row[speed_key] is not None:
-                    speed = str(row[speed_key]).strip()
-                    break
-
-            # 尝试多种可能的列名来获取延迟
-            latency = ""
-            for latency_key in ["平均延迟", "延迟", "latency"]:
-                if latency_key in row and row[latency_key] is not None:
-                    latency = str(row[latency_key]).strip()
-                    break
-
-            # 获取地区码
-            region_code = (row.get("地区码") or "").strip()
-
-            # 如果IP地址中包含端口信息
-            if ip and ":" in ip:
-                ip_parts = ip.split(":")
-                if len(ip_parts) == 2:
-                    ip = ip_parts[0]
-                    if not port:
-                        port = ip_parts[1]
-
-            # 设置默认端口
-            if not port:
-                port = "443"
-
-            if ip:
-                try:
-                    speed_val = float(speed) if speed else 0
-                    latency_val = latency if latency else "N/A"
-
-                    # 获取地区中文名称
-                    region_name = "未知地区"
-                    if region_code and region_code in AIRPORT_CODES:
-                        region_name = AIRPORT_CODES[region_code].get(
-                            "name", region_code
-                        )
-                    elif region_code:
-                        region_name = region_code
-
-                    best_ips.append(
-                        {
-                            "ip": ip,
-                            "port": int(port),
-                            "speed": speed_val,
-                            "latency": latency_val,
-                            "region_code": region_code,
-                            "region_name": region_name,
-                        }
-                    )
-                except ValueError:
-                    continue
-
     if not best_ips:
         print("❌ 未找到有效的测速结果")
         return
@@ -3939,70 +3755,7 @@ def upload_to_cloudflare_api_cli(
     # 读取测速结果（先读取，确认有数据后再清空）
     print("\n📊 正在读取测速结果...")
     try:
-        best_ips = []
-        with open(result_file, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                # 安全获取数据，避免NoneType错误
-                ip = (row.get("IP 地址") or "").strip()
-                port = (row.get("端口") or "").strip()
-
-                # 尝试多种可能的列名来获取速度
-                speed = ""
-                for speed_key in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度"]:
-                    if speed_key in row and row[speed_key] is not None:
-                        speed = str(row[speed_key]).strip()
-                        break
-
-                # 尝试多种可能的列名来获取延迟
-                latency = ""
-                for latency_key in ["平均延迟", "延迟", "latency"]:
-                    if latency_key in row and row[latency_key] is not None:
-                        latency = str(row[latency_key]).strip()
-                        break
-
-                # 获取地区码
-                region_code = (row.get("地区码") or "").strip()
-
-                # 如果IP地址中包含端口信息
-                if ip and ":" in ip:
-                    ip_parts = ip.split(":")
-                    if len(ip_parts) == 2:
-                        ip = ip_parts[0]
-                        if not port:
-                            port = ip_parts[1]
-
-                # 设置默认端口
-                if not port:
-                    port = "443"
-
-                if ip:
-                    try:
-                        speed_val = float(speed) if speed else 0
-                        latency_val = latency if latency else "N/A"
-
-                        # 获取地区中文名称
-                        region_name = "未知地区"
-                        if region_code and region_code in AIRPORT_CODES:
-                            region_name = AIRPORT_CODES[region_code].get(
-                                "name", region_code
-                            )
-                        elif region_code:
-                            region_name = region_code
-
-                        best_ips.append(
-                            {
-                                "ip": ip,
-                                "port": int(port),
-                                "speed": speed_val,
-                                "latency": latency_val,
-                                "region_code": region_code,
-                                "region_name": region_name,
-                            }
-                        )
-                    except ValueError:
-                        continue
-
+        best_ips = _parse_speedtest_csv(result_file)
         if not best_ips:
             print("❌ 未找到有效的测速结果")
             return
@@ -4154,70 +3907,7 @@ def upload_to_github_cli(
     # 读取测速结果
     print("\n📊 正在读取测速结果...")
     try:
-        best_ips = []
-        with open(result_file, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                # 安全获取数据，避免NoneType错误
-                ip = (row.get("IP 地址") or "").strip()
-                port = (row.get("端口") or "").strip()
-
-                # 尝试多种可能的列名来获取速度
-                speed = ""
-                for speed_key in ["下载速度(MB/s)", "下载速度 (MB/s)", "下载速度"]:
-                    if speed_key in row and row[speed_key] is not None:
-                        speed = str(row[speed_key]).strip()
-                        break
-
-                # 尝试多种可能的列名来获取延迟
-                latency = ""
-                for latency_key in ["平均延迟", "延迟", "latency"]:
-                    if latency_key in row and row[latency_key] is not None:
-                        latency = str(row[latency_key]).strip()
-                        break
-
-                # 获取地区码
-                region_code = (row.get("地区码") or "").strip()
-
-                # 如果IP地址中包含端口信息
-                if ip and ":" in ip:
-                    ip_parts = ip.split(":")
-                    if len(ip_parts) == 2:
-                        ip = ip_parts[0]
-                        if not port:
-                            port = ip_parts[1]
-
-                # 设置默认端口
-                if not port:
-                    port = "443"
-
-                if ip:
-                    try:
-                        speed_val = float(speed) if speed else 0
-                        latency_val = latency if latency else "N/A"
-
-                        # 获取地区中文名称
-                        region_name = "未知地区"
-                        if region_code and region_code in AIRPORT_CODES:
-                            region_name = AIRPORT_CODES[region_code].get(
-                                "name", region_code
-                            )
-                        elif region_code:
-                            region_name = region_code
-
-                        best_ips.append(
-                            {
-                                "ip": ip,
-                                "port": int(port),
-                                "speed": speed_val,
-                                "latency": latency_val,
-                                "region_code": region_code,
-                                "region_name": region_name,
-                            }
-                        )
-                    except ValueError:
-                        continue
-
+        best_ips = _parse_speedtest_csv(result_file)
         if not best_ips:
             print("❌ 未找到有效的测速结果")
             return

@@ -1628,7 +1628,7 @@ def _parse_speedtest_csv(result_file="result.csv"):
                 "latency": latency,
                 "region_code": region_code,
                 "region_name": region_name,
-                "ip_port": f"{ip}:{port}",
+                "ip_port": f"[{ip}]:{port}" if ":" in ip else f"{ip}:{port}",
             })
     return rows
 
@@ -3152,7 +3152,7 @@ def upload_to_cloudflare_api(result_file="result.csv"):
             else "未知地区"
         )
         print(
-            f"  {i:2d}. {ip_info['ip']:15s}:{ip_info['port']:<5d} - {ip_info['speed']:.2f} MB/s - {region_display} - 延迟: {ip_info['latency']}"
+            f"  {i:2d}. {ip_info['ip_port']} - {ip_info['speed']:.2f} MB/s - {region_display} - 延迟: {ip_info['latency']}"
         )
     print("-" * 70)
 
@@ -3468,7 +3468,7 @@ def upload_to_github(result_file="result.csv"):
             else "未知地区"
         )
         print(
-            f"  {i:2d}. {ip_info['ip']:15s}:{ip_info['port']:<5d} - {ip_info['speed']:.2f} MB/s - {region_display} - 延迟: {ip_info['latency']}"
+            f"  {i:2d}. {ip_info['ip_port']} - {ip_info['speed']:.2f} MB/s - {region_display} - 延迟: {ip_info['latency']}"
         )
     print("-" * 70)
 
@@ -3487,7 +3487,7 @@ def upload_to_github(result_file="result.csv"):
         speed = ip_info["speed"]
         name = f"{region_name}-{speed:.2f}MB/s"
         # 格式：IP:端口#地区名-速度MB/s（井号前后无空格）
-        content_lines.append(f"{ip_info['ip']}:{ip_info['port']}#{name}")
+        content_lines.append(f"{ip_info['ip_port']}#{name}")
 
     # 使用换行符连接所有行
     content = "\n".join(content_lines)
@@ -3925,7 +3925,7 @@ def upload_to_github_cli(
             speed = ip_info["speed"]
             name = f"{region_name}-{speed:.2f}MB/s"
             # 格式：IP:端口#地区名-速度MB/s（井号前后无空格）
-            content_lines.append(f"{ip_info['ip']}:{ip_info['port']}#{name}")
+            content_lines.append(f"{ip_info['ip_port']}#{name}")
 
         # 使用换行符连接所有行
         content = "\n".join(content_lines)

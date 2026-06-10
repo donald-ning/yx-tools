@@ -14,6 +14,7 @@ import requests
 import json
 import csv
 import argparse
+import traceback
 from pathlib import Path
 from datetime import datetime
 
@@ -3403,7 +3404,7 @@ def upload_to_cloudflare_api(result_file="result.csv"):
                 if fail_count > 0:
                     print(f"   失败: {fail_count} 个")
             else:
-                print(f"❌ 批量上报失败: {result.get('error', '未知错误')}")
+                print(f"❌ 批量上报失败: {result.get('error') or result.get('message') or result}")
                 fail_count = upload_count
         elif response and response.status_code == 403:
             print(f"❌ 认证失败！请检查：")
@@ -3429,10 +3430,10 @@ def upload_to_cloudflare_api(result_file="result.csv"):
         fail_count = upload_count
     except Exception as e:
         print(f"❌ 请求失败: {e}")
-        print(f"   建议：检查配置是否正确，或联系技术支持")
+        traceback.print_exc()
         fail_count = upload_count
 
-    # 显示统计信息
+    # 显示统计信息（交互模式）
     print("\n" + "=" * 70)
     print(" 批量上报完成！")
     print("=" * 70)
@@ -4045,7 +4046,7 @@ def upload_to_cloudflare_api_cli(
                     print(f"  📊 总计: {upload_count} 个")
                     print("=" * 70)
                 else:
-                    print(f"❌ 批量上报失败: {result.get('error', '未知错误')}")
+                    print(f"❌ 批量上报失败: {result.get('error') or result.get('message') or result}")
             elif response and response.status_code == 403:
                 print(f"❌ 认证失败！请检查：")
                 print(f"   1. UUID或者路径是否正确")
@@ -4064,6 +4065,7 @@ def upload_to_cloudflare_api_cli(
             print(f"❌ 网络错误: {e}")
         except Exception as e:
             print(f"❌ 请求失败: {e}")
+            traceback.print_exc()
 
     except Exception as e:
         print(f"❌ 读取测速结果失败: {e}")

@@ -784,7 +784,7 @@ def display_preset_configs():
     print("=" * 60)
 
 
-def show_main_menu(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
+def show_main_menu():
     """显示主菜单并循环执行任务"""
     while True:
         print("\n" + "=" * 70)
@@ -793,14 +793,14 @@ def show_main_menu(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
         print("【1. 测速任务】")
         print("  1. 小白快速测试     全自动测速，测全量 IP，无需选地区")
         print("  2. 常规测速         按指定机场码过滤测速")
-        print("  3. 优选反代         从 result.csv 生成 IP:端口 反代列表")
+        print("  3. 优选反代         从测速结果生成 IP:端口 反代列表")
         print()
-        print("【2. 上报任务】(需先跑测速生成 result.csv)")
+        print("【2. 上报任务】(需先跑测速生成结果文件)")
         print("  4. 上报优选 IP      上传到 Cloudflare Workers API 或 GitHub")
         print()
         print("【3. 工具】")
         print("  5. 查看可用机场码   列出所有支持的机场码")
-        print(f"  6. 强制重新扫描地区 覆盖 {get_region_scan_file(ip_file)} 缓存")
+        print("  6. 强制重新扫描地区 清除缓存重新扫描可用地区")
         print()
         print("  0. 退出")
         print("=" * 70)
@@ -811,9 +811,9 @@ def show_main_menu(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
             print("\n再见！")
             return
         elif choice == "1":
-            handle_beginner_mode(ip_file, ip_version)
+            handle_beginner_mode()
         elif choice == "2":
-            handle_normal_mode(ip_file, ip_version)
+            handle_normal_mode()
         elif choice == "3":
             handle_proxy_mode()
         elif choice == "4":
@@ -823,7 +823,7 @@ def show_main_menu(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
             input("\n按回车键返回主菜单...")
             continue
         elif choice == "6":
-            handle_rescan_regions(ip_file)
+            handle_rescan_regions()
             input("\n按回车键返回主菜单...")
             continue
         else:
@@ -837,17 +837,22 @@ def show_main_menu(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
 
 def select_csv_file():
     """选择CSV文件"""
+    return select_csv_file_with_default("result.csv")
+
+
+def select_csv_file_with_default(default_csv="result.csv"):
+    """选择CSV文件（可指定默认文件名）"""
     while True:
-        csv_file = input("\n请输入CSV文件路径 [默认: result.csv]: ").strip()
+        csv_file = input(f"\n请输入CSV文件路径 [默认: {default_csv}]: ").strip()
         if not csv_file:
-            csv_file = "result.csv"
+            csv_file = default_csv
 
         if os.path.exists(csv_file):
             print(f"找到文件: {csv_file}")
             return csv_file
         else:
             print(f"文件不存在: {csv_file}")
-            print("请确保文件路径正确，或先运行常规测速生成result.csv")
+            print("请确保文件路径正确，或先运行测速生成结果文件")
             retry = input("是否重新输入？[Y/n]: ").strip().lower()
             if retry in ["n", "no"]:
                 return None
@@ -1036,14 +1041,29 @@ def handle_proxy_mode():
         )
         print("模式: 反代IP列表测速")
 
+        # 从IP文件中检测IP版本，确定输出文件名
+        proxy_output = "result.csv"
+        try:
+            with open("ips_ports.txt", "r") as f:
+                first_line = f.readline().strip()
+                if first_line:
+                    # IPv6 地址包含多个冒号 (如 [2606:4700::1]:443 或 2606:4700::1:443)
+                    ip_part = first_line.split(":")[0] if not first_line.startswith("[") else first_line
+                    if first_line.startswith("[") or first_line.count(":") > 1:
+                        proxy_output = "result_v6.csv"
+                    else:
+                        proxy_output = "result_v4.csv"
+        except Exception:
+            pass
+
         # 运行测速
         result_code = run_speedtest_with_file(
-            "ips_ports.txt", dn_count, speed_limit, time_limit, thread_count
+            "ips_ports.txt", dn_count, speed_limit, time_limit, thread_count, proxy_output
         )
 
         # 如果测速成功，询问是否上报结果
-        if result_code == 0 and os.path.exists("result.csv"):
-            upload_results_to_api("result.csv")
+        if result_code == 0 and os.path.exists(proxy_output):
+            upload_results_to_api(proxy_output)
 
         return None, None, None, None
     else:
@@ -1051,15 +1071,32 @@ def handle_proxy_mode():
         return None, None, None, None
 
 
-def handle_upload_mode_interactive():
-    """交互式直接上报 result.csv（无需测速）"""
+def handle_upload_mode_interactive(ip_version="ipv4"):
+    """交互式直接上报测速结果（无需重新测速）
+
+    Args:
+        ip_version: 当前菜单的 IP 版本上下文（"ipv4" 或 "ipv6"），作为默认选项
+    """
     print("\n" + "=" * 70)
     print(" 直接上报模式")
     print("=" * 70)
-    print(" 此功能读取已有 result.csv 直接上传，无需重新测速")
+    print(" 此功能读取已有的测速结果 CSV 直接上传，无需重新测速")
     print("=" * 70)
 
-    csv_file = select_csv_file()
+    # 选择 IPv4/IPv6，自动匹配对应的结果文件
+    print("\n请选择要上报的 IP 版本:")
+    print(f"  1. IPv4 → result_v4.csv")
+    print(f"  2. IPv6 → result_v6.csv")
+    default_ver = "1" if ip_version == "ipv4" else "2"
+    ver_choice = input(f"请选择 [1/2, 默认: {default_ver}]: ").strip() or default_ver
+
+    if ver_choice == "2":
+        default_csv = "result_v6.csv"
+    else:
+        default_csv = "result_v4.csv"
+
+    # 选择 CSV 文件（自动匹配版本默认值）
+    csv_file = select_csv_file_with_default(default_csv)
     if not csv_file:
         return False
 
@@ -1069,66 +1106,46 @@ def handle_upload_mode_interactive():
     choice = input("请选择 [1-2, 默认: 1]: ").strip() or "1"
 
     if choice == "1":
-        # API 上传
-        worker_domain = input("Worker 域名 (例如 example.workers.dev): ").strip()
-        if not worker_domain:
-            print("❌ Worker 域名不能为空")
-            return False
-        uuid = input("UUID 或路径: ").strip()
-        if not uuid:
-            print("❌ UUID 不能为空")
-            return False
-        upload_count_str = input("上传 IP 数量 [默认: 10]: ").strip() or "10"
-        try:
-            upload_count = int(upload_count_str)
-        except ValueError:
-            print("❌ 无效的数量，使用默认 10")
-            upload_count = 10
-        clear = input("上报前清空远程旧 IP? [y/N]: ").strip().lower() == "y"
-        upload_to_cloudflare_api_cli(
-            csv_file, worker_domain, uuid, upload_count, clear_existing=clear
-        )
+        # API 上传 — 复用 upload_to_cloudflare_api 的配置加载逻辑
+        upload_to_cloudflare_api(csv_file)
         return True
     elif choice == "2":
-        # GitHub 上传
-        repo = input("GitHub 仓库 (owner/repo): ").strip()
-        if not repo or "/" not in repo:
-            print("❌ 仓库格式错误，应为 owner/repo")
-            return False
-        token = input("GitHub Personal Access Token: ").strip()
-        if not token:
-            print("❌ Token 不能为空")
-            return False
-        file_path = (
-            input("文件路径 [默认: cloudflare_ips.txt]: ").strip()
-            or "cloudflare_ips.txt"
-        )
-        upload_count_str = input("上传 IP 数量 [默认: 10]: ").strip() or "10"
-        try:
-            upload_count = int(upload_count_str)
-        except ValueError:
-            print("❌ 无效的数量，使用默认 10")
-            upload_count = 10
-        upload_to_github_cli(csv_file, repo, token, file_path, upload_count)
+        # GitHub 上传 — 复用 upload_to_github 的配置加载逻辑
+        upload_to_github(csv_file)
         return True
     else:
         print("❌ 无效选择")
         return False
 
 
-def handle_beginner_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
-    """处理小白快速测试模式
-
-    Args:
-        ip_file: 要使用的IP文件路径
-        ip_version: IP版本（"ipv4" 或 "ipv6"）
-    """
+def handle_beginner_mode():
+    """处理小白快速测试模式"""
+    global LAST_GENERATED_COMMAND
     print("\n" + "=" * 70)
     print(" 小白快速测试模式")
     print("=" * 70)
     print(" 此功能专为新手设计，只需要输入3个简单的数字即可开始测试")
     print(" 无需了解复杂的参数设置，程序会引导您完成所有配置")
     print("=" * 70)
+
+    # 选择 IP 版本
+    print("\n🌐 IP 版本选择:")
+    print("  1. IPv4（推荐，兼容性最好）")
+    print("  2. IPv6（需要本地网络支持 IPv6）")
+    ver_choice = input("请选择 [1/2, 默认: 1]: ").strip() or "1"
+    if ver_choice == "2":
+        ip_version = "ipv6"
+        ip_file = CLOUDFLARE_IPV6_FILE
+    else:
+        ip_version = "ipv4"
+        ip_file = CLOUDFLARE_IP_FILE
+
+    result_file = f"result_{'v6' if ip_version == 'ipv6' else 'v4'}.csv"
+
+    # 下载或生成 IP 列表
+    if not download_cloudflare_ips(ip_version, ip_file):
+        print("❌ 准备IP列表失败")
+        return None, None, None, None
 
     # 获取测试IP数量
     print("\n📊 第一步：设置测试IP数量")
@@ -1258,7 +1275,7 @@ def handle_beginner_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
             "-url",
             DEFAULT_SPEEDTEST_URL,
             "-o",
-            "result.csv",
+            result_file,
         ]
     )
 
@@ -1269,12 +1286,12 @@ def handle_beginner_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
     result = subprocess.run(cmd, encoding="utf-8", errors="replace")
 
     if result.returncode == 0:
-        print("\n✅ 测速完成！结果已保存到 result.csv")
-        print("📊 您可以查看 result.csv 文件来了解详细的测试结果")
+        print(f"\n✅ 测速完成！结果已保存到 {result_file}")
+        print(f"📊 您可以查看 {result_file} 文件来了解详细的测试结果")
         print("💡 提示：结果文件中的IP按速度从快到慢排序")
 
         # 询问是否上报结果
-        upload_info = upload_results_to_api("result.csv")
+        upload_info = upload_results_to_api(result_file)
 
         # 输出对应的命令行命令
         print("\n" + "=" * 80)
@@ -1291,7 +1308,6 @@ def handle_beginner_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
             thread_count,
         )
         # 保存命令供定时任务使用
-        global LAST_GENERATED_COMMAND
         LAST_GENERATED_COMMAND = cli_cmd
         print("本次交互对应的命令行命令：")
         print("-" * 80)
@@ -1305,15 +1321,52 @@ def handle_beginner_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
     return "ALL", dn_count, speed_limit, time_limit, thread_count
 
 
-def handle_normal_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
-    """处理常规测速模式
+def handle_normal_mode():
+    """处理常规测速模式"""
+    global LAST_GENERATED_COMMAND
+    print("\n" + "=" * 70)
+    print(" 常规测速模式")
+    print("=" * 70)
+    print(" 按指定地区（机场码）过滤测试，结果更精准")
+    print("=" * 70)
 
-    Args:
-        ip_file: 要使用的IP文件路径
-        ip_version: IP版本（"ipv4" 或 "ipv6"）
-    """
-    # 获取可用地区（自动复用缓存；缓存不存在时自动扫描）
-    available_regions = detect_available_regions(ip_file=ip_file)
+    # 选择 IP 版本
+    print("\n🌐 IP 版本选择:")
+    print("  1. IPv4（推荐，兼容性最好）")
+    print("  2. IPv6（需要本地网络支持 IPv6）")
+    ver_choice = input("请选择 [1/2, 默认: 1]: ").strip() or "1"
+    if ver_choice == "2":
+        ip_version = "ipv6"
+        ip_file = CLOUDFLARE_IPV6_FILE
+    else:
+        ip_version = "ipv4"
+        ip_file = CLOUDFLARE_IP_FILE
+
+    result_file = f"result_{'v6' if ip_version == 'ipv6' else 'v4'}.csv"
+
+    # 下载或生成 IP 列表
+    if not download_cloudflare_ips(ip_version, ip_file):
+        print("❌ 准备IP列表失败")
+        return None
+
+    # 检查地区扫描缓存，让用户选择复用还是重新扫描
+    region_scan_file = get_region_scan_file(ip_file)
+    force_rescan = False
+    if os.path.exists(region_scan_file) and os.path.getsize(region_scan_file) > 0:
+        print(f"\n📂 检测到地区扫描缓存: {region_scan_file}")
+        print("  1. 复用缓存（跳过地区扫描，直接进入测速）")
+        print("  2. 重新扫描地区（覆盖缓存，较慢）")
+        scan_choice = input("请选择 [1/2，默认: 1]: ").strip() or "1"
+        if scan_choice == "2":
+            force_rescan = True
+            print("🔄 将重新扫描地区...")
+        else:
+            print(f"✅ 复用缓存的地区扫描结果")
+    elif not os.path.exists(region_scan_file):
+        print(f"\n📂 未找到地区扫描缓存，将进行首次扫描...")
+
+    # 获取可用地区
+    available_regions = detect_available_regions(force=force_rescan, ip_file=ip_file)
 
     if not available_regions:
         print("❌ 未检测到可用地区，请检查网络连接")
@@ -1503,7 +1556,7 @@ def handle_normal_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
                     "-url",
                     DEFAULT_SPEEDTEST_URL,
                     "-o",
-                    "result.csv",
+                    result_file,
                 ]
             )
 
@@ -1518,10 +1571,10 @@ def handle_normal_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
                 os.remove(region_ip_file)
 
             if result.returncode == 0:
-                print("\n✅ 测速完成！结果已保存到 result.csv")
+                print(f"\n✅ 测速完成！结果已保存到 {result_file}")
 
                 # 询问是否上报结果
-                upload_info = upload_results_to_api("result.csv")
+                upload_info = upload_results_to_api(result_file)
 
                 # 输出对应的命令行命令
                 print("\n" + "=" * 80)
@@ -1538,7 +1591,6 @@ def handle_normal_mode(ip_file=CLOUDFLARE_IP_FILE, ip_version="ipv4"):
                     thread_count,
                 )
                 # 保存命令供定时任务使用
-                global LAST_GENERATED_COMMAND
                 LAST_GENERATED_COMMAND = cli_cmd
                 print("本次交互对应的命令行命令：")
                 print("-" * 80)
@@ -1593,11 +1645,29 @@ def _parse_speedtest_csv(result_file="result.csv"):
                 elif k.lower() == "port":
                     port = str(row[k]).strip()
                     break
-            if ip and ":" in ip and ip.count(":") == 1:
-                ip_parts = ip.split(":")
-                ip = ip_parts[0]
-                if not port:
-                    port = ip_parts[1]
+            if ip and ":" in ip:
+                if ip.count(":") == 1:
+                    # IPv4:port 格式 (如 1.2.3.4:443)
+                    parts = ip.split(":")
+                    ip = parts[0]
+                    if not port:
+                        port = parts[1]
+                elif ip.startswith("["):
+                    # [IPv6]:port 格式 (如 [2606:4700::1]:443)
+                    bracket_end = ip.index("]")
+                    ip_clean = ip[1:bracket_end]
+                    port_part = ip[bracket_end+2:] if bracket_end+2 < len(ip) else ""
+                    ip = ip_clean
+                    if port_part and not port:
+                        port = port_part
+                else:
+                    # IPv6 地址，最后一段可能是端口号
+                    segments = ip.split(":")
+                    if len(segments) > 8:
+                        # 超过 8 段 → 最后一段是端口
+                        ip = ":".join(segments[:-1])
+                        if not port:
+                            port = segments[-1]
             if not port:
                 port = "443"
             if not ip:
@@ -1662,7 +1732,7 @@ def generate_proxy_list(result_file="result.csv", output_file="ips_ports.txt"):
 
     return True
 def run_speedtest_with_file(
-    ip_file, dn_count, speed_limit, time_limit, thread_count="200"
+    ip_file, dn_count, speed_limit, time_limit, thread_count="200", output_file="result.csv"
 ):
     """使用指定IP文件运行测速（反代模式，不需要机场码）"""
     try:
@@ -1687,6 +1757,8 @@ def run_speedtest_with_file(
             DEFAULT_SPEEDTEST_URL,
             "-p",
             "20",  # 显示前20个结果
+            "-o",
+            output_file,
         ]
 
         print(f"\n运行命令: {' '.join(cmd)}")
@@ -1698,7 +1770,7 @@ def run_speedtest_with_file(
 
         if result.returncode == 0:
             print("\n测速完成！")
-            print("结果已保存到 result.csv")
+            print(f"结果已保存到 {output_file}")
         else:
             print(f"\n测速失败，返回码: {result.returncode}")
 
@@ -1830,6 +1902,14 @@ def parse_args():
         help="GitHub文件路径（默认: cloudflare_ips.txt）",
     )
 
+    # 输出文件参数
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="result.csv",
+        help="测速结果输出文件（默认: result.csv）",
+    )
+
     # 其他参数
     parser.add_argument(
         "--upload-count", type=int, default=10, help="上传IP数量（默认: 10）"
@@ -1882,6 +1962,10 @@ def run_with_args(args):
             ip_version, ip_file = "ipv4", CLOUDFLARE_IP_FILE
             print("✓ 已选择: IPv4")
 
+        # 根据 IP 版本设置默认输出文件名，避免 v4/v6 结果相互覆盖
+        if args.output == "result.csv":
+            args.output = "result_v6.csv" if args.ipv6 else "result_v4.csv"
+
         # 下载或生成 Cloudflare IP 列表
         if not download_cloudflare_ips(ip_version, ip_file):
             print("❌ 准备IP列表失败")
@@ -1892,6 +1976,7 @@ def run_with_args(args):
 
     # 根据模式运行
     if args.mode == "beginner":
+        output_file = args.output
         # 小白快速测试模式
         print(f"\n[小白快速测试模式]")
         print(f"  测试IP数量: {args.count}")
@@ -1925,7 +2010,7 @@ def run_with_args(args):
                 "-url",
                 DEFAULT_SPEEDTEST_URL,
                 "-o",
-                "result.csv",
+                output_file,
             ]
         )
 
@@ -1935,18 +2020,29 @@ def run_with_args(args):
         result = subprocess.run(cmd, encoding="utf-8", errors="replace")
 
         if result.returncode == 0:
-            print("\n✅ 测速完成！结果已保存到 result.csv")
+            print(f"\n✅ 测速完成！结果已保存到 {output_file}")
 
             # 处理上传
             if args.upload == "api":
-                if not args.worker_domain or not args.uuid:
-                    print("❌ API上传需要提供 --worker-domain 和 --uuid 参数")
+                wd = args.worker_domain
+                uid = args.uuid
+                if not wd or not uid:
+                    saved = load_config()
+                    if saved:
+                        if not wd:
+                            wd = saved.get("worker_domain")
+                        if not uid:
+                            uid = saved.get("uuid")
+                        if wd and uid:
+                            print(f"✅ 使用保存的配置: {wd}/{uid}")
+                if not wd or not uid:
+                    print("❌ API上传需要提供 --worker-domain 和 --uuid 参数，或已保存的配置")
                 else:
                     # 调用命令行模式的上传函数
                     upload_to_cloudflare_api_cli(
-                        "result.csv",
-                        args.worker_domain,
-                        args.uuid,
+                        output_file,
+                        wd,
+                        uid,
                         args.upload_count,
                         clear_existing=args.clear,
                     )
@@ -1956,7 +2052,7 @@ def run_with_args(args):
                 else:
                     # 调用命令行模式的上传函数
                     upload_to_github_cli(
-                        "result.csv",
+                        output_file,
                         args.repo,
                         args.token,
                         args.file_path,
@@ -1967,6 +2063,7 @@ def run_with_args(args):
             return 1
 
     elif args.mode == "normal":
+        output_file = args.output
         # 常规测速模式
         if not args.region:
             print("❌ 常规测速模式需要提供 --region 参数（例如: --region HKG）")
@@ -2044,7 +2141,7 @@ def run_with_args(args):
                 "-url",
                 DEFAULT_SPEEDTEST_URL,
                 "-o",
-                "result.csv",
+                output_file,
             ]
         )
 
@@ -2058,18 +2155,29 @@ def run_with_args(args):
             os.remove(region_ip_file)
 
         if result.returncode == 0:
-            print("\n✅ 测速完成！结果已保存到 result.csv")
+            print(f"\n✅ 测速完成！结果已保存到 {output_file}")
 
             # 处理上传
             if args.upload == "api":
-                if not args.worker_domain or not args.uuid:
-                    print("❌ API上传需要提供 --worker-domain 和 --uuid 参数")
+                wd = args.worker_domain
+                uid = args.uuid
+                if not wd or not uid:
+                    saved = load_config()
+                    if saved:
+                        if not wd:
+                            wd = saved.get("worker_domain")
+                        if not uid:
+                            uid = saved.get("uuid")
+                        if wd and uid:
+                            print(f"✅ 使用保存的配置: {wd}/{uid}")
+                if not wd or not uid:
+                    print("❌ API上传需要提供 --worker-domain 和 --uuid 参数，或已保存的配置")
                 else:
                     # 调用命令行模式的上传函数
                     upload_to_cloudflare_api_cli(
-                        "result.csv",
-                        args.worker_domain,
-                        args.uuid,
+                        output_file,
+                        wd,
+                        uid,
                         args.upload_count,
                         clear_existing=args.clear,
                     )
@@ -2079,7 +2187,7 @@ def run_with_args(args):
                 else:
                     # 调用命令行模式的上传函数
                     upload_to_github_cli(
-                        "result.csv",
+                        output_file,
                         args.repo,
                         args.token,
                         args.file_path,
@@ -2123,13 +2231,25 @@ def run_with_args(args):
             return 1
 
         if args.upload == "api":
-            if not args.worker_domain or not args.uuid:
-                print("❌ API上传需要提供 --worker-domain 和 --uuid 参数")
+            worker_domain = args.worker_domain
+            uuid = args.uuid
+            # 未提供参数时尝试加载保存的配置
+            if not worker_domain or not uuid:
+                saved = load_config()
+                if saved:
+                    if not worker_domain:
+                        worker_domain = saved.get("worker_domain")
+                    if not uuid:
+                        uuid = saved.get("uuid")
+                    if worker_domain and uuid:
+                        print(f"✅ 使用保存的配置: {worker_domain}/{uuid}")
+            if not worker_domain or not uuid:
+                print("❌ API上传需要提供 --worker-domain 和 --uuid 参数，或已保存的配置")
                 return 1
             upload_to_cloudflare_api_cli(
                 args.csv,
-                args.worker_domain,
-                args.uuid,
+                worker_domain,
+                uuid,
                 args.upload_count,
                 clear_existing=args.clear,
             )
@@ -2311,18 +2431,6 @@ def main():
     print(f"\n[配置加载]")
     load_local_airport_codes()
 
-    # 下载 CloudflareSpeedTest
-    print(f"\n[程序准备]")
-    exec_name = download_cloudflare_speedtest(os_type, arch_type)
-
-    # 选择 IP 版本
-    ip_version, ip_file = select_ip_version()
-
-    # 下载或生成 Cloudflare IP 列表
-    if not download_cloudflare_ips(ip_version, ip_file):
-        print("❌ 准备IP列表失败")
-        return 1
-
     # 获取用户输入
     print(f"\n[参数配置]")
     print("=" * 60)
@@ -2333,7 +2441,7 @@ def main():
     print("=" * 60)
 
     # 启动主菜单（循环执行任务，0 退出）
-    show_main_menu(ip_file, ip_version)
+    show_main_menu()
 
     # 退出主菜单后，询问是否设置定时任务
     if sys.platform.startswith("linux") or sys.platform == "darwin":
@@ -3195,17 +3303,60 @@ def upload_to_cloudflare_api(result_file="result.csv"):
         except Exception as e:
             print(f"⚠️  清空操作失败: {e}，继续尝试添加...")
 
+    # 如果是 IPv4 上传（新结果中没有 IPv6），保留 worker 中已有的 IPv6 条目
+    new_has_ipv6 = any(":" in ip_info["ip"] for ip_info in best_ips[:upload_count])
+    existing_ipv6_entries = []
+    if not new_has_ipv6 and not should_clear:
+        # 此次上传的结果全是 IPv4，需要保留 worker 中已有的 IPv6 条目
+        print("\n🔍 检测到本次上传为纯 IPv4，正在获取 worker 中已有的 IPv6 条目...")
+        try:
+            try:
+                get_resp = requests.get(api_url, timeout=10)
+            except ImportError as e:
+                if "SSL module is not available" in str(e):
+                    get_resp = curl_request(api_url, method="GET", timeout=10)
+                else:
+                    raise
+            if get_resp.status_code == 200:
+                existing_data = get_resp.json()
+                existing_ips = existing_data.get("ips", [])
+                for entry in existing_ips:
+                    entry_ip = entry.get("ip", "")
+                    # 判断是否为 IPv6（包含冒号，且不含点号，说明不是 IPv4）
+                    # CFNew yx 字段为 ip:port 字符串格式，IPv6 必须加方括号
+                    if ":" in entry_ip and "." not in entry_ip:
+                        # 确保已有 IPv6 带上方括号
+                        if not entry_ip.startswith("["):
+                            entry["ip"] = f"[{entry_ip}]"
+                        existing_ipv6_entries.append(entry)
+                        print(f"   ↗ 保留已有 IPv6: {entry['ip']}")
+                if existing_ipv6_entries:
+                    print(f"   共保留 {len(existing_ipv6_entries)} 个已有 IPv6 条目")
+            else:
+                print(f"   ⚠️ 无法获取已有数据 (HTTP {get_resp.status_code})，仅上传新结果")
+        except Exception as e:
+            print(f"   ⚠️ 获取已有数据失败: {e}，仅上传新结果")
+
     # 构建批量上报数据
     print("\n🚀 开始批量上报优选IP...")
     batch_data = []
+    # 先添加已有的 IPv6 条目（保持原样）
+    if existing_ipv6_entries:
+        print(f"   正在将 {len(existing_ipv6_entries)} 个已有 IPv6 加入上报列表...")
+        batch_data.extend(existing_ipv6_entries)
+    # 再添加新的测速结果
     for ip_info in best_ips[:upload_count]:
         # 构建节点名称：地区名-速度MB/s
         region_name = ip_info.get("region_name", "未知地区")
         speed = ip_info["speed"]
         name = f"{region_name}-{speed:.2f}MB/s"
+        # IPv6 地址加方括号 — CFNew yx 字段为 ip:port 字符串格式，必须用 [] 区分
+        ip_addr = ip_info["ip"]
+        if ":" in ip_addr:
+            ip_addr = f"[{ip_addr}]"
 
         batch_data.append(
-            {"ip": ip_info["ip"], "port": ip_info["port"], "name": name}
+            {"ip": ip_addr, "port": ip_info["port"], "name": name}
         )
 
     # 发送批量POST请求
@@ -3797,17 +3948,60 @@ def upload_to_cloudflare_api_cli(
             except Exception as e:
                 print(f"⚠️  清空操作失败: {e}，继续尝试添加...")
 
+        # 如果是 IPv4 上传（新结果中没有 IPv6），保留 worker 中已有的 IPv6 条目
+        new_has_ipv6 = any(":" in ip_info["ip"] for ip_info in best_ips[:upload_count])
+        existing_ipv6_entries = []
+        if not new_has_ipv6 and not should_clear:
+            # 此次上传的结果全是 IPv4，需要保留 worker 中已有的 IPv6 条目
+            print("\n🔍 检测到本次上传为纯 IPv4，正在获取 worker 中已有的 IPv6 条目...")
+            try:
+                try:
+                    get_resp = requests.get(api_url, timeout=10)
+                except ImportError as e:
+                    if "SSL module is not available" in str(e):
+                        get_resp = curl_request(api_url, method="GET", timeout=10)
+                    else:
+                        raise
+                if get_resp.status_code == 200:
+                    existing_data = get_resp.json()
+                    existing_ips = existing_data.get("ips", [])
+                    for entry in existing_ips:
+                        entry_ip = entry.get("ip", "")
+                        # 判断是否为 IPv6（包含冒号，且不含点号，说明不是 IPv4）
+                        # CFNew yx 字段为 ip:port 字符串格式，IPv6 必须加方括号
+                        if ":" in entry_ip and "." not in entry_ip:
+                            # 确保已有 IPv6 带上方括号
+                            if not entry_ip.startswith("["):
+                                entry["ip"] = f"[{entry_ip}]"
+                            existing_ipv6_entries.append(entry)
+                            print(f"   ↗ 保留已有 IPv6: {entry['ip']}")
+                    if existing_ipv6_entries:
+                        print(f"   共保留 {len(existing_ipv6_entries)} 个已有 IPv6 条目")
+                else:
+                    print(f"   ⚠️ 无法获取已有数据 (HTTP {get_resp.status_code})，仅上传新结果")
+            except Exception as e:
+                print(f"   ⚠️ 获取已有数据失败: {e}，仅上传新结果")
+
         # 构建批量上报数据
         print("\n🚀 开始批量上报优选IP...")
         batch_data = []
+        # 先添加已有的 IPv6 条目（保持原样）
+        if existing_ipv6_entries:
+            print(f"   正在将 {len(existing_ipv6_entries)} 个已有 IPv6 加入上报列表...")
+            batch_data.extend(existing_ipv6_entries)
+        # 再添加新的测速结果
         for ip_info in best_ips[:upload_count]:
             # 构建节点名称：地区名-速度MB/s
             region_name = ip_info.get("region_name", "未知地区")
             speed = ip_info["speed"]
             name = f"{region_name}-{speed:.2f}MB/s"
+            # IPv6 地址加方括号 — CFNew yx 字段为 ip:port 字符串格式，必须用 [] 区分
+            ip_addr = ip_info["ip"]
+            if ":" in ip_addr:
+                ip_addr = f"[{ip_addr}]"
 
             batch_data.append(
-                {"ip": ip_info["ip"], "port": ip_info["port"], "name": name}
+                {"ip": ip_addr, "port": ip_info["port"], "name": name}
             )
 
         # 发送批量POST请求
@@ -4145,13 +4339,24 @@ def upload_to_github_cli(
         traceback.print_exc()
 
 
-def handle_rescan_regions(ip_file=CLOUDFLARE_IP_FILE):
+def handle_rescan_regions():
     """强制重新扫描所有地区（菜单入口）"""
-    region_scan_file = get_region_scan_file(ip_file)
     print("\n" + "=" * 70)
     print(" 强制重新扫描地区")
     print("=" * 70)
-    print(f" 将忽略 {region_scan_file} 缓存，扫描全量 Cloudflare IP 段（1~2 分钟）")
+
+    # 选择要扫描的 IP 版本
+    print("\n请选择要扫描的 IP 版本:")
+    print("  1. IPv4（默认）")
+    print("  2. IPv6")
+    ver_choice = input("请选择 [1/2, 默认: 1]: ").strip() or "1"
+    if ver_choice == "2":
+        ip_file = CLOUDFLARE_IPV6_FILE
+    else:
+        ip_file = CLOUDFLARE_IP_FILE
+
+    region_scan_file = get_region_scan_file(ip_file)
+    print(f"\n 将忽略 {region_scan_file} 缓存，扫描全量 Cloudflare IP 段")
     print("=" * 70)
 
     confirm = input("确认重新扫描? [y/N]: ").strip().lower()
